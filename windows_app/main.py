@@ -18,6 +18,7 @@ Run: OrcaAudioCleanupApp.cmd (or pythonw windows_app\\main.py [files...]).
 from __future__ import annotations
 
 import json
+import math
 import mimetypes
 import os
 import shutil
@@ -65,7 +66,7 @@ def clean_appearance(a) -> dict | None:
     out = {"theme": a["theme"]}
     for k, (lo, hi) in RANGES.items():
         v = a.get(k)
-        if isinstance(v, bool) or not isinstance(v, (int, float)) or v != v or v in (float("inf"), float("-inf")):
+        if isinstance(v, bool) or not isinstance(v, (int, float)) or not math.isfinite(v):
             return None
         out[k] = round(min(hi, max(lo, v)))
     return out
@@ -169,7 +170,7 @@ jobs = Jobs()
 def kill_tree(proc: subprocess.Popen) -> None:
     """End the engine and everything it started (by its exact process id)."""
     subprocess.run(["taskkill", "/PID", str(proc.pid), "/T", "/F"],
-                   capture_output=True, creationflags=NO_WINDOW)
+                   capture_output=True, creationflags=NO_WINDOW, check=False)
 
 
 def remove_partials(job: dict) -> None:
@@ -263,8 +264,8 @@ class Api:
         import webview
         picked = self._window.create_file_dialog(
             webview.FileDialog.OPEN, allow_multiple=True,
-            file_types=("Videos and audio (*.mp4;*.mov;*.mkv;*.webm;*.m4v;*.avi;*.mts;"
-                        "*.wav;*.mp3;*.m4a;*.flac;*.aac)", "All files (*.*)"))
+            file_types=(("Videos and audio (*.mp4;*.mov;*.mkv;*.webm;*.m4v;*.avi;*.mts;"
+                         "*.wav;*.mp3;*.m4a;*.flac;*.aac)"), "All files (*.*)"))
         return jobs.add(list(picked or []))
 
     def cancel(self, job_id: str) -> None:
@@ -310,7 +311,7 @@ class Api:
             return {"ok": False, "error": "This file has no previews to remix."}
         cmd = [str(ENGINE), "remix", j["stems"], "-s", f"{speech:g}", "-b", f"{background:g}",
                "-m", f"{music:g}", "--events"]
-        r = subprocess.run(cmd, capture_output=True, env=ENV, creationflags=NO_WINDOW)
+        r = subprocess.run(cmd, capture_output=True, env=ENV, creationflags=NO_WINDOW, check=False)
         done = err = None
         for line in r.stdout.decode("utf-8", errors="replace").splitlines():
             try:
