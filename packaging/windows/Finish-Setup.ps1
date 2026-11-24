@@ -68,7 +68,10 @@ try {
         New-Item -ItemType Directory -Force -Path $bin | Out-Null
         $zip = Join-Path $env:TEMP "orca-ffmpeg-9.1.zip"
         Invoke-Tool "curl.exe" @("-L", "--fail", "--retry", "3", "-o", $zip, $ffmpegZip) "Downloading ffmpeg"
-        $hash = (Get-FileHash -Algorithm SHA256 -Path $zip).Hash.ToLowerInvariant()
+        # .NET directly: Get-FileHash fails to autoload when launched from PowerShell 7
+        $stream = [System.IO.File]::OpenRead($zip)
+        try { $hash = [System.BitConverter]::ToString([System.Security.Cryptography.SHA256]::Create().ComputeHash($stream)).Replace("-", "").ToLowerInvariant() }
+        finally { $stream.Dispose() }
         if ($hash -ne $ffmpegSha256) {
             Remove-Item -Force $zip
             throw "The ffmpeg download didn't match its checksum, so it was not used."

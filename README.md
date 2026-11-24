@@ -14,7 +14,67 @@ Built on [Booth](https://github.com/shrimbly/booth) by shrimbly (MIT licence), p
 
 ## Install
 
-You need Windows 10 or 11, about 2 GB of disk space, and about 6 GB of free memory while it works.
+### ⬇️ [Download OrcaAudioCleanup-Setup.exe](https://github.com/24pfilms/OrcaAudioClean/releases/latest/download/OrcaAudioCleanup-Setup.exe)
+
+Windows 10 or 11 (64-bit), about 4 GB of free disk space, and an internet connection for the first setup.
+
+> [!IMPORTANT]
+> **Windows will warn you about this app. That is expected, and here is why.**
+> OrcaAudioCleanup is free and made by one person. It is **not signed** with a paid Microsoft
+> certificate, so Windows doesn't recognise it and shows a warning before it lets you install it.
+> The app is safe to run: every line of its code is public in this repository.
+> Follow the steps below **exactly**; you only do this once.
+
+**Step 1. Download it.** Click the download link above.
+
+Your browser may warn you too, because few people have downloaded this file yet:
+
+- **Microsoft Edge** says *"OrcaAudioCleanup-Setup.exe isn't commonly downloaded."*
+  Point at that message and click the **three dots (…)** → **Keep** → **Show more** → **Keep anyway**.
+- **Google Chrome** may say the file *"isn't commonly downloaded"* or is *"unverified"*.
+  Click the download (top right) and choose **Keep** (or **Download anyway**).
+- **No warning?** Good, go on.
+
+**Step 2. Open it.** Double-click `OrcaAudioCleanup-Setup.exe` in your **Downloads** folder.
+
+**Step 3. Get past the blue "Windows protected your PC" box.** This is the important one.
+
+```
+┌──────────────────────────────────────────────────────────┐
+│  Windows protected your PC                               │
+│                                                          │
+│  Microsoft Defender SmartScreen prevented an             │
+│  unrecognized app from starting. Running this app        │
+│  might put your PC at risk.                              │
+│  More info   ◀── 1. CLICK THIS (small underlined text)   │
+│                                                          │
+│                                        [ Don't run ]     │
+└──────────────────────────────────────────────────────────┘
+```
+
+1. Click the small underlined words **More info**. (There is no Run button until you do.)
+2. A **Run anyway** button appears at the bottom, next to *Don't run*. Click **Run anyway**.
+
+   It will say *Publisher: Unknown publisher*. That is the missing certificate, nothing else.
+
+**Step 4. Click through the installer.** Click **Next** and **Install**. A second window opens and
+downloads the engine and the voice models (about 2 GB, once). **Leave it open**: it takes 10 to 20
+minutes and closes by itself. Then click **Finish**.
+
+You now have an **OrcaAudioCleanup** icon on your desktop and in the Start menu, and a
+*Clean up audio with OrcaAudioCleanup* item when you right-click a video.
+
+**If something goes wrong**
+
+- **The download window stopped with a red message:** check your internet, then open the Start menu
+  and run **Finish OrcaAudioCleanup setup**. It carries on where it stopped.
+- **"Smart App Control blocked an app"** (no *Run anyway* button at all): your PC blocks every
+  unsigned app, not just this one. The only way round it is to turn Smart App Control off in
+  *Windows Security → App & browser control*. That is a PC-wide safety choice, so only do it if you're comfortable.
+- **Remove it:** *Settings → Apps → Installed apps → OrcaAudioCleanup → Uninstall*. This removes the
+  app, its engine and its models. It never touches your videos or the cleaned copies.
+
+### Install from the source code (for developers)
 
 1. Install [uv](https://docs.astral.sh/uv/) and ffmpeg (in PowerShell):
    ```
@@ -30,7 +90,7 @@ You need Windows 10 or 11, about 2 GB of disk space, and about 6 GB of free memo
    `booth setup` downloads the voice models (about 1.1 GB) once. The last line adds a desktop icon,
    a right-click menu for videos and a **Send to** entry. `Uninstall-OrcaAudioCleanup.ps1` removes them.
 
-The window's list and preview sounds, and the models the app downloads, go in
+Either way, the window's list and preview sounds, and the models the app downloads, go in
 `%LOCALAPPDATA%\OrcaAudioCleanup`. To keep them on another drive, set the `ORCA_AUDIO_HOME`
 environment variable to a folder there.
 
