@@ -1,0 +1,119 @@
+# Builds the OrcaAudioCleanup Windows installer, installs it silently on a clean Windows runner,
+# cleans a test clip with the installed app, uninstalls it, and keeps the installer as an artifact.
+# Pushing a tag v<version> (matching pyproject.toml) also uploads it to that tag's GitHub release.
+name: Windows installer
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  installer:
+    runs-on: windows-2025
+    timeout-minutes: 90
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      UV_VERSION: '0.13.9'
+      UV_SHA256: edd61f7f5728a56cc62455386661860bdfc7bab65872f39b0c25bdcc1d8e1beb
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Version and tag
+        run: |
+          $version = (Select-String -Path pyproject.toml -Pattern '^version = "(.*)"$').Matches[0].Groups[1].Value
+          "VERSION=$version" >> $env:GITHUB_ENV
+          if ($env:GITHUB_EVENT_NAME -eq 'push' -and $env:GITHUB_REF_NAME -ne "v$version") {
+            throw "The tag $env:GITHUB_REF_NAME doesn't match pyproject.toml's version $version"
+          }
+
+      # uv goes inside the installer, so it is pinned and checked.
+      - name: Fetch uv
+        run: |
+          $zip = "$env:RUNNER_TEMP\uv.zip"
+          Invoke-WebRequest "https://github.com/astral-sh/uv/releases/download/$env:UV_VERSION/uv-x86_64-pc-windows-msvc.zip" -OutFile $zip
+          if ((Get-FileHash $zip -Algorithm SHA256).Hash.ToLower() -ne $env:UV_SHA256) { throw "uv checksum mismatch" }
+          Expand-Archive $zip -DestinationPath packaging\windows\build
+          Get-Item packaging\windows\build\uv.exe
+
+      - name: Build the installer
+        run: |
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" /Qp "/DAppVersion=$env:VERSION" packaging\windows\OrcaAudioCleanup.iss
+          if ($LASTEXITCODE) { throw "ISCC failed" }
+          Copy-Item "dist\OrcaAudioCleanup-Setup-$env:VERSION.exe" dist\OrcaAudioCleanup-Setup.exe
+          Get-ChildItem dist\*.exe | ForEach-Object { "$((Get-FileHash $_ -Algorithm SHA256).Hash.ToLower())  $($_.Name)" } | Set-Content dist\SHA256SUMS
+          Get-Content dist\SHA256SUMS
+
+      - name: Install silently, as a user would
+        run: |
+          $p = Start-Process "dist\OrcaAudioCleanup-Setup.exe" -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART',"/LOG=$env:RUNNER_TEMP\install.log" -Wait -PassThru
+          $setupLog = "$env:LOCALAPPDATA\OrcaAudioCleanup\setup.log"
+          if (Test-Path $setupLog) { Get-Content $setupLog -Tail 40 }
+          if ($p.ExitCode) { throw "installer exit code $($p.ExitCode)" }
+          if (-not (Select-String -Path $setupLog -Pattern '^== Done' -Quiet)) { throw "Finish-Setup did not finish" }
+
+      - name: Check the install
+        run: |
+          $app = "$env:LOCALAPPDATA\Programs\OrcaAudioCleanup"
+          $env:HF_HOME = "$env:LOCALAPPDATA\OrcaAudioCleanup\hf"
+          $env:TORCH_HOME = "$env:LOCALAPPDATA\OrcaAudioCleanup\torch"
+          & "$app\.venv\Scripts\booth.exe" --version
+          $status = & "$app\.venv\Scripts\booth.exe" setup --check
+          $status
+          if ($status -ne 'ready') { throw "setup incomplete: $status" }
+          & "$app\.venv\Scripts\python.exe" -c "import webview; print('pywebview ok')"
+          if ($LASTEXITCODE) { throw "pywebview missing" }
+          foreach ($f in "$([Environment]::GetFolderPath('Desktop'))\OrcaAudioCleanup.lnk",
+                         "$([Environment]::GetFolderPath('SendTo'))\OrcaAudioCleanup.lnk",
+                         "HKCU:\Software\Classes\SystemFileAssociations\.mp4\shell\OrcaAudioCleanup") {
+            if (-not (Test-Path $f)) { throw "missing: $f" }
+          }
+
+      - name: Clean a test clip with the installed app
+        run: |
+          $app = "$env:LOCALAPPDATA\Programs\OrcaAudioCleanup"
+          $env:HF_HOME = "$env:LOCALAPPDATA\OrcaAudioCleanup\hf"
+          $env:TORCH_HOME = "$env:LOCALAPPDATA\OrcaAudioCleanup\torch"
+          $ffmpeg = (Get-Command ffmpeg -ErrorAction SilentlyContinue).Source
+          if (-not $ffmpeg) { $ffmpeg = "$env:USERPROFILE\.cache\booth\bin\ffmpeg.exe" }
+          & $ffmpeg -v error -f lavfi -i testsrc=size=640x360:rate=30 -f lavfi -i "sine=frequency=220:sample_rate=48000" -t 6 -c:v libx264 -pix_fmt yuv420p -c:a aac "$env:RUNNER_TEMP\clip.mp4"
+          & "$app\.venv\Scripts\booth.exe" "$env:RUNNER_TEMP\clip.mp4"
+          if ($LASTEXITCODE) { throw "cleaning failed" }
+          Get-Item "$env:RUNNER_TEMP\clip-enhanced.mp4", "$env:RUNNER_TEMP\clip-enhanced.wav"
+
+      - name: Uninstall
+        run: |
+          $app = "$env:LOCALAPPDATA\Programs\OrcaAudioCleanup"
+          Start-Process "$app\unins000.exe" -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART' -Wait
+          Start-Sleep -Seconds 5
+          foreach ($f in "$app\.venv", "$env:LOCALAPPDATA\OrcaAudioCleanup",
+                         "$([Environment]::GetFolderPath('Desktop'))\OrcaAudioCleanup.lnk",
+                         "HKCU:\Software\Classes\SystemFileAssociations\.mp4\shell\OrcaAudioCleanup") {
+            if (Test-Path $f) { throw "still there after uninstall: $f" }
+          }
+
+      - name: Publish
+        if: ${{ github.event_name == 'push' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = "v$env:VERSION"
+          gh release view $tag *> $null
+          if ($LASTEXITCODE) { gh release create $tag --verify-tag --title "OrcaAudioCleanup for Windows $env:VERSION" --notes-file packaging\windows\release-notes.md }
+          gh release upload $tag "dist\OrcaAudioCleanup-Setup-$env:VERSION.exe" dist\OrcaAudioCleanup-Setup.exe dist\SHA256SUMS --clobber
+
+      - name: Keep the installer
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: OrcaAudioCleanup-Setup
+          if-no-files-found: warn
+          path: |
+            dist/*.exe
+            dist/SHA256SUMS
+            ${{ runner.temp }}/install.log
