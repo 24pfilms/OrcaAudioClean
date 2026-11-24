@@ -113,11 +113,23 @@ class Task:
         except OSError as e:
             self.tail.append(f"{cmd[0]}: {e}")
             return False
-        os.set_blocking(self.proc.stdout.fileno(), False)
+        if hasattr(os, "set_blocking"):
+            os.set_blocking(self.proc.stdout.fileno(), False)
+        else:                        # Windows: pipes can't be non-blocking, read on a thread
+            import threading
+            out, tail = self.proc.stdout, self.tail
+
+            def pump() -> None:
+                try:
+                    for line in iter(out.readline, b""):
+                        tail.append(line.decode(errors="replace").rstrip())
+                except (OSError, ValueError):
+                    pass
+            threading.Thread(target=pump, daemon=True).start()
         return True
 
     def drain(self) -> None:
-        if self.proc is None or self.proc.stdout is None:
+        if self.proc is None or self.proc.stdout is None or not hasattr(os, "set_blocking"):
             return
         try:
             chunk = self.proc.stdout.read()

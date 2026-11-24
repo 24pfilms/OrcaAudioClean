@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>OrcaAudioCleanup</title>
+<link rel="icon" href="/ui/icon.png">
+<!-- Orca Master Theming v1.0.0: local fonts, tokens, engine (no network) -->
+<link rel="stylesheet" href="/ui/orca/fonts/space-grotesk/wght.css">
+<link rel="stylesheet" href="/ui/orca/fonts/jetbrains-mono/wght.css">
+<link rel="stylesheet" href="/ui/orca/orca-theme.css">
+<script src="/ui/orca/orca-theme.js"></script>
+<link rel="stylesheet" href="/ui/app.css">
+</head>
+<body>
+<div class="app-shell">
+<div class="orca-wallpaper" aria-hidden="true"></div>
+<header>
+  <div class="brand"><img src="/ui/orca/assets/orca-small.png" alt=""><div><strong>OrcaAudioCleanup</strong><span>Clean voice for your videos</span></div></div>
+  <div class="tools">
+    <button id="add" class="primary" title="Choose videos or audio files">+ Add files</button>
+    <div id="appearance"></div>
+  </div>
+</header>
+
+<main id="main">
+  <section id="left" class="glass">
+    <div id="drop" class="drop">
+      <div class="drop-big">Drop videos here</div>
+      <div class="drop-small">or click to choose files · they are cleaned one at a time</div>
+    </div>
+    <div id="list" class="list"></div>
+    <footer class="list-foot">
+      <span id="count"></span>
+      <span class="grow"></span>
+      <button id="clear-done" class="ghost">Clear finished</button>
+      <button id="clear-all" class="ghost danger">Clear all</button>
+    </footer>
+  </section>
+
+  <div id="divider" title="Drag to resize"></div>
+
+  <section id="right" class="glass">
+    <div id="empty" class="empty">
+      <div class="empty-title">Nothing selected</div>
+      <div class="empty-text">When a file is finished, click it to listen before and after
+        and change the mix.</div>
+    </div>
+
+    <div id="player" hidden>
+      <div class="player-head">
+        <div>
+          <div id="p-name" class="p-name"></div>
+          <div id="p-meta" class="p-meta"></div>
+        </div>
+        <div class="p-actions">
+          <button id="p-open" class="ghost">Open</button>
+          <button id="p-folder" class="ghost">Show in folder</button>
+        </div>
+      </div>
+
+      <div class="stage">
+        <video id="video" muted playsinline preload="auto"></video>
+        <div id="novideo" class="novideo" hidden>Audio only</div>
+        <div id="loading" class="loading" hidden>Loading previews…</div>
+      </div>
+
+      <canvas id="wave" height="84"></canvas>
+
+      <div class="transport">
+        <button id="play" class="round" title="Play / pause (Space)">▶</button>
+        <span id="time" class="time">0:00 / 0:00</span>
+        <span class="grow"></span>
+        <button id="hold" class="hold" title="Hold to hear the original (or hold the O key)">
+          Hold to hear original</button>
+        <span id="ab" class="ab">Cleaned</span>
+      </div>
+
+      <div class="sliders">
+        <label class="slider">
+          <span class="s-name">Speech</span>
+          <input id="s" type="range" min="0" max="100" step="1">
+          <span id="s-val" class="s-val"></span>
+          <span class="s-help">How strongly the voice is rebuilt</span>
+        </label>
+        <label class="slider">
+          <span class="s-name">Background</span>
+          <input id="b" type="range" min="0" max="100" step="1">
+          <span id="b-val" class="s-val"></span>
+          <span class="s-help">Room sound and noise to keep</span>
+        </label>
+        <label class="slider" id="m-row">
+          <span class="s-name">Music</span>
+          <input id="m" type="range" min="0" max="100" step="1">
+          <span id="m-val" class="s-val"></span>
+          <span id="m-help" class="s-help">Music to keep</span>
+        </label>
+      </div>
+
+      <div class="save-row">
+        <button id="reset" class="ghost">Reset to default</button>
+        <span class="grow"></span>
+        <span id="save-msg" class="save-msg"></span>
+        <button id="save" class="primary" disabled>Save this mix</button>
+      </div>
+    </div>
+  </section>
+</main>
+<footer class="made-by">Made with <span class="heart" aria-label="love">&#10084;</span> by
+  <a id="site" href="https://squarecirclelabs.com">squarecirclelabs.com</a></footer>
+</div>
+
+<script src="/ui/app.js"></script>
+</body>
+</html>

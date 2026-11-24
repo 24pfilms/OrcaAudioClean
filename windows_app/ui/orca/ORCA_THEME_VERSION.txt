@@ -1,0 +1,6 @@
+Orca Master Theming
+Version: 1.0.0
+Assembled: 2026-08-23
+Canonical source: L:/orcacoderv3
+Default palette: Scarlet
+Fonts: Space Grotesk Variable 5.3.0; JetBrains Mono Variable 5.3.0

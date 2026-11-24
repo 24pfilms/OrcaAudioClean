@@ -282,6 +282,12 @@ def _parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     import os
+    if sys.platform == "win32":     # Windows consoles default to cp1252: print ✓, Δ, → safely
+        for stream in (sys.stdout, sys.stderr):
+            try:
+                stream.reconfigure(encoding="utf-8", errors="replace")
+            except (AttributeError, ValueError):
+                pass
     # OpenMP worker threads sleep as soon as a parallel region ends. That is the
     # default of torch 2.15's libomp, but torch 2.2's spun for 200 ms first, and
     # demucs runs thousands of short regions: spinning, it takes about three

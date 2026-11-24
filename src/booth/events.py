@@ -106,6 +106,8 @@ def open_event_stream() -> EventStream:
 
 def become_process_group_leader() -> None:
     """Own process group, so the app can signal us and all children at once."""
+    if not hasattr(os, "setpgrp"):
+        return    # Windows: no process groups; the app ends the whole process tree instead
     try:
         os.setpgrp()
     except OSError:
@@ -126,10 +128,11 @@ def install_cancel_handler(stream: EventStream, grace_s: float = 5.0) -> None:
         for sig in (signal.SIGTERM, signal.SIGINT):
             signal.signal(sig, signal.SIG_IGN)
         stream.emit("error", code="cancelled", message="Cancelled.")
-        try:
-            os.killpg(os.getpgrp(), signal.SIGTERM)  # children; we ignore it now
-        except OSError:
-            pass
+        if hasattr(os, "killpg"):     # not on Windows (children end with the process tree)
+            try:
+                os.killpg(os.getpgrp(), signal.SIGTERM)  # children; we ignore it now
+            except OSError:
+                pass
         threading.Thread(target=_hard_exit_after, args=(grace_s,), daemon=True).start()
         raise Cancelled()
 

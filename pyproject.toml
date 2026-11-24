@@ -25,6 +25,11 @@ dependencies = [
 [project.scripts]
 booth = "booth.cli:main"
 
+[project.optional-dependencies]
+ui = [
+    "pywebview>=5",
+]
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/booth"]
 

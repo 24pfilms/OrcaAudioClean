@@ -1,3 +1,0 @@
-# SwiftPM build products (swift build without --scratch-path)
-/.build/
-/build/
